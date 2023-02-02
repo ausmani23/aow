@@ -33,15 +33,10 @@ filesdir<-file.path(
 #helper function
 suma = function(x) if (all(is.na(x))) x[NA_integer_] else sum(x, na.rm = TRUE)
 
-
-#########################################################
-#########################################################
-
-#BLACK AND WHITE ARRESTEES
-
-#calculations are in this other file
-# setwd(codedir); dir()
-# source('thetradeoff_fairness_01thearrested.R')
+#calculations list 
+calcs_list <- list()
+#all calculations mentioned in the paper are stored in this list
+#after running the file, these calculations are saved as a .txt file in '/output'
 
 #########################################################
 #########################################################
@@ -69,7 +64,9 @@ tmpdf$policekillings <-
 sum(tmpdf$policekillings[tmpdf$countryname!='United States'])
 
 usa<-tmpdf$countryname=='United States'
-tmpdf$policekillings_percapita[usa]/
+
+calcs_list[['USA/Other Developed Countries Police Killings Ratio']]<-
+  tmpdf$policekillings_percapita[usa]/
   median(tmpdf$policekillings_percapita[!usa])
 
 #########################################################
@@ -77,7 +74,10 @@ tmpdf$policekillings_percapita[usa]/
 
 #LIFE AT THE BOTTOM, US VS NORWAY
 
-#load kenworthy's dataset
+#load lane kenworthy's dataset
+#this dataset accompanies the book, Social Democratic Capitalism
+#https://lanekenworthy.files.wordpress.com/2019/10/sdc-data.xlsx
+
 setwd(datadir); dir()
 require(readxl)
 thisfile<-'sdc-data.xlsx'
@@ -103,6 +103,12 @@ tmpdf$relativepoverty_2010to2016[nor]/tmpdf$relativepoverty_2010to2016[usa]
 #########################################################
 
 #EMPLOYMENT RATES
+
+#these data come from IPUMS Census Microdata
+#Steven Ruggles, Sarah Flood, Ronald Goeken, Megan Schouweiler and Matthew Sobek. 
+#IPUMS USA: Version 12.0 [dataset]. Minneapolis, MN: IPUMS, 2022. 
+#https://doi.org/10.18128/D010.V12.0
+
 setwd(datadir); dir()
 sumdfs<-readRDS('sumdfs.RDS')
 empdf<-lapply(sumdfs,function(x) x$emp_f) %>% 
@@ -185,8 +191,7 @@ ggsave(
   height=4/1.25
 )
 
-#trends by race and skill 
-
+#trends by race and skill (men)
 
 plotdf<-empdf[
   ageg_f%in%c(3,4,5) &
@@ -260,12 +265,12 @@ ggsave(
   height=4/1.25
 )
 
-
-
 ########################################################
 ########################################################
 
-#load the SCF data
+#load the Survey of Consumer Finances (2019)
+#https://www.federalreserve.gov/econres/files/scfp2019s.zip
+
 setwd(datadir); dir()
 require(haven)
 fulldf<-read_dta('rscfp2019.dta') %>%
@@ -305,7 +310,7 @@ tmpdf<-fulldf[
 ]
 tmpdf$i<-1
 tmpdf<-spread(tmpdf,race,networth_median)
-tmpdf$`1`/tmpdf$`2` #about 7.85
+calcs_list[['White/Black Wealth Gap']] <- tmpdf$`1`/tmpdf$`2` #about 7.85
 
 #this is the education gap, amongst black people
 #college vs. high school
@@ -318,12 +323,16 @@ tmpdf<-fulldf[
   by=c('race','educ')
 ]
 tmpdf<-spread(tmpdf,educ,networth_median)
-tmpdf$`4`/tmpdf$`1` #about 10.3
+calcs_list[['College/Dropout Black Wealth Gap']] <- tmpdf$`4`/tmpdf$`1` #about 10.3
 
 ########################################################
 ########################################################
 
-#load the CPS data
+#load the Current Population Survey data
+#these are the 2021 edition
+#Sarah Flood, Miriam King, Renae Rodgers, Steven Ruggles, J. Robert Warren and Michael Westberry.
+#Integrated Public Use Microdata Series, Current Population Survey: Version 10.0 [dataset]. 
+#Minneapolis, MN: IPUMS, 2022. https://doi.org/10.18128/D030.V10.0
 
 #helper funcitons
 isodd<-function(x) x%%2!=0
@@ -502,8 +511,10 @@ tmpdf
 
 
 #union membership by race, education
-100 * weighted.mean(cpsdf$union_f,cpsdf$asecwt,na.rm=T)
-100 * weighted.mean(cpsdf$union_f[cpsdf$ed_f==1],cpsdf$asecwt[cpsdf$ed_f==1],na.rm=T)
+calcs_list[['Union Density']] <- 
+  100 * weighted.mean(cpsdf$union_f,cpsdf$asecwt,na.rm=T)
+calcs_list[['Union Density (<HS)']] <- 
+  100 * weighted.mean(cpsdf$union_f[cpsdf$ed_f==1],cpsdf$asecwt[cpsdf$ed_f==1],na.rm=T)
 tmpdf<-cpsdf[
   ed_f%in%c(1) &
   emp_f==1 & 
@@ -521,7 +532,8 @@ tmpdf<-cpsdf[
   )
 ]
 setkey(tmpdf,race_f,ed_f)
-tmpdf
+calcs_list[['Union Density (Black, <HS)']] <- unlist(tmpdf[1,3])
+
 
 #summary of income and public support
 #by wage quantiles
@@ -669,7 +681,7 @@ ggsave(
 ########################################################
 ########################################################
 
-#simple simulation of how returns_punishment are dictated by 
+#this is a simple simulation of how returns_punishment are dictated by 
 #PLE and simple decomposition of punishment into components
 
 returns_punishment <- function(
@@ -805,7 +817,7 @@ ggsave(
 ########################################################
 ########################################################
 
-#simple graph to illustrate theory of crime
+#this is a simple graph to illustrate theory of crime
 
 tmpdf<-data.frame(
   percentile=0:100
@@ -882,7 +894,9 @@ ggsave(
 #########################################################
 #########################################################
 
-#GOV SPENDING, OECD
+#these data are OECD spending data
+#downloaded from https://data.oecd.org/gga/general-government-spending.htm
+
 #compare public order spending
 #with spending on social protection,
 #optionally including also health/education
@@ -913,6 +927,7 @@ spdf<-merge(
 )
 
 #population
+#downloaded from: https://data.oecd.org/pop/population.htm
 setwd(datadir); dir()
 popdf<-fread(
   'DP_LIVE_31012023155513737.csv'
@@ -940,7 +955,8 @@ spdf$gdp <- (spdf$gdp_capita * (spdf$population * 10^6))
 spdf$value_dollars <- spdf$value/100 * spdf$gdp
 spdf$value_dollarspc <- spdf$value_dollars/(spdf$population*10^6)
 
-#get country codes
+#this is a set of country codes,
+#to convert three-letter codes to countrynames
 setwd(datadir); dir()
 tmpdf<-fread(
   '34107835.csv',
@@ -968,7 +984,7 @@ tmp<-spdf$country%in%c(
   "GBR",
   "ITA",
   "JPN",
-  #"LUX",
+  #"LUX", #cut b/c small population
   "NLD",
   "NOR",
   "SWE",
@@ -1015,62 +1031,62 @@ tmpdf$ratio_s1p<-(tmpdf$edu + tmpdf$health)/tmpdf$pubord
 plotdf<-tmpdf[tmpdf$var=='value_dollarspc',]
 
 #calcs
-plotdf$pubord[plotdf$country=='USA']/
-  mean(plotdf$pubord[plotdf$country!='USA'])
-mean(plotdf$ratio_sp)
+calcs_list[['US Spending on Public Order vs. Others']] <- 
+  100 * (plotdf$pubord[plotdf$country=='USA']/
+  mean(plotdf$pubord[plotdf$country!='USA']) - 1)
+
+calcs_list[['Average Ratio in Developed Countries']] <- 
+  mean(plotdf$ratio_sp)
 median(plotdf$ratio_sp)
-plotdf$ratio_sp[plotdf$country=='USA']
-plotdf$ratio_sp[plotdf$countryname=='Denmark']
+calcs_list[['Ratio in USA']] <- plotdf$ratio_sp[plotdf$country=='USA']
+calcs_list[['Ratio in Denmark']] <- plotdf$ratio_sp[plotdf$countryname=='Denmark']
 
 
-#factors
-tmporder<-order(plotdf$ratio_sp)
-tmplevels<-plotdf$countryname[tmporder]
-plotdf$countryname<-factor(
-  plotdf$countryname,
-  tmplevels
-)
+# DEPRECATED (we don't use this graph)
+# tmporder<-order(plotdf$ratio_sp)
+# tmplevels<-plotdf$countryname[tmporder]
+# plotdf$countryname<-factor(
+#   plotdf$countryname,
+#   tmplevels
+# )
+# plotdf$usa<-plotdf$country=="USA"
+# tmpcolors<-c("red","grey")
+# names(tmpcolors)<-c(T,F)
+# g.tmp<-ggplot(
+#   plotdf,
+#   aes(
+#     x=countryname,
+#     y=ratio_sp,
+#     fill=usa
+#   )
+# ) +
+#   geom_hline(
+#     yintercept=mean(plotdf$ratio_sp),
+#     linetype='dashed',
+#     alpha=0.5
+#   ) +
+#   geom_bar(
+#     stat='identity',
+#     color='black',
+#     width=0.7
+#   ) +
+#   scale_fill_manual(
+#     guide='none',
+#     values=tmpcolors
+#   ) +
+#   xlab("") +
+#   ylab("\nSocial Spending / Penal Spending") +
+#   coord_flip() +
+#   theme_bw() 
+# setwd(outputdir)
+# ggsave(
+#   filename='fig_spvspspending.png',
+#   plot=g.tmp,
+#   width=6,
+#   height=6
+# )
 
-plotdf$usa<-plotdf$country=="USA"
-tmpcolors<-c("red","grey")
-names(tmpcolors)<-c(T,F)
-
-g.tmp<-ggplot(
-  plotdf,
-  aes(
-    x=countryname,
-    y=ratio_sp,
-    fill=usa
-  )
-) +
-  geom_hline(
-    yintercept=mean(plotdf$ratio_sp),
-    linetype='dashed',
-    alpha=0.5
-  ) +
-  geom_bar(
-    stat='identity',
-    color='black',
-    width=0.7
-  ) +
-  scale_fill_manual(
-    guide='none',
-    values=tmpcolors
-  ) +
-  xlab("") +
-  ylab("\nSocial Spending / Penal Spending") +
-  coord_flip() +
-  theme_bw()
-
-setwd(outputdir)
-ggsave(
-  filename='fig_spvspspending.png',
-  plot=g.tmp,
-  width=6,
-  height=6
-)
-
-
+#calculations for text
 #to calculate what USA spends
 #we use these numbers and a measure of USA gdp in 2020
 usapop_2020 <- 331.449520 * 10^6 #https://www.census.gov/quickfacts/fact/table/US/PST045222
@@ -1087,7 +1103,9 @@ socspendpct_usa_2020 <-
 
 #$ amount spent (in billions)
 puborder_usa_2020 <- (puborderpct_usa_2020 * usagdp_2020)/10^9
+calcs_list[['USA Spending on Public Order (billiions)']] <- puborder_usa_2020 
 socspend_usa_2020 <- (socspendpct_usa_2020 * usagdp_2020)/10^9
+calcs_list[['USA Spending on Social Protection, Education and Health (billions)']] <- socspend_usa_2020
 
 #how does the US rank relative to other countries
 tmpdf$sp<-tmpdf$edu + tmpdf$health + tmpdf$socprot
@@ -1096,15 +1114,19 @@ mydf[order(mydf$sp),c('countryname','sp')]
 mydf[order(mydf$socprot),c('countryname','socprot')]
 
 #amount that diverting to social spending would increase social spending
-(puborder_usa_2020 + socspend_usa_2020)/socspend_usa_2020
+calcs_list[['What Would Reinvestment do to Social Spending? (% increase)']] <- 
+  100 * (( (puborder_usa_2020 + socspend_usa_2020)/socspend_usa_2020) -1)
 
 #amount that distributing puborder spending would do
 #if we gave universal grant to each household
 usahh_2020 <- 124010992 #https://www.census.gov/quickfacts/fact/table/US/HSD410221
-10^9 * puborder_usa_2020/usahh_2020
+calcs_list[['If Distributed as a Universal Grant?']] <- 
+  10^9 * puborder_usa_2020/usahh_2020
 #if we gave as targeted grant to each black familiy below the poverty line
 blackhhpoverty_2020 <- 1795 * 10^3 #table 4 at https://www.census.gov/data/tables/time-series/demo/income-poverty/historical-poverty-people.html
-10^9 * puborder_usa_2020/blackhhpoverty_2020
+calcs_list[['If Distributed as a Hyper-Targeted Grant?']] <- 
+  10^9 * puborder_usa_2020/blackhhpoverty_2020
+
   
 #how much would it cost to match Nordic's level of social spending?
 tmp<-tmpdf$countryname%in%c('Norway','Sweden','Denmark')
@@ -1114,7 +1136,10 @@ socspendpct_nordic_2020 <- mean(
     tmpdf$health[tmp & tmpdf$var=='value'])/100
 )
 usagap <- socspendpct_nordic_2020 - socspendpct_usa_2020
-usagap/puborderpct_usa_2020
+calcs_list[['How Much Would Reinvestment Close the Gap to Nordics?']]<- 
+  usagap/puborderpct_usa_2020
+calcs_list[['How Much Would Reinvestment Close the Gap to Nordics? (%)']]<- 
+  100 * 1/(usagap/puborderpct_usa_2020)
 
 #make a quick plot of this
 plotdf<-data.frame(
@@ -1156,3 +1181,17 @@ ggsave(
 
 #########################################################
 #########################################################
+
+#write out calculations
+setwd(outputdir); dir()
+write('Calculations for Abolition of What?','calculations.txt')
+write('###','calculations.txt',append=T)
+lapply(
+  seq_along(calcs_list),
+  function(i) {
+    print(i)
+    write(names(calcs_list)[i],'calculations.txt',append=T)
+    write(calcs_list[[i]],'calculations.txt',append=T)
+    write("###",'calculations.txt',append=T)
+  }
+)
