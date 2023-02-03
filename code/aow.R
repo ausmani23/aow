@@ -1129,7 +1129,7 @@ calcs_list[['If Distributed as a Hyper-Targeted Grant?']] <-
 
   
 #how much would it cost to match Nordic's level of social spending?
-tmp<-tmpdf$countryname%in%c('Norway','Sweden','Denmark')
+tmp<-tmpdf$countryname%in%c('Norway','Sweden','Denmark','Finland')
 socspendpct_nordic_2020 <- mean(
   (tmpdf$socprot[tmp & tmpdf$var=='value'] +
     tmpdf$edu[tmp & tmpdf$var=='value'] + 
@@ -1147,6 +1147,18 @@ plotdf<-data.frame(
   y=c(socspend_usa_2020,puborder_usa_2020)
 )
 plotdf$x<-factor(plotdf$x)
+
+blues<-hcl(
+  h=seq(210,240,length=3),
+  l=65,
+  c=100
+)
+reds<-hcl(
+  h=seq(0,60,length=6),
+  l=65,
+  c=100
+)
+
 tmpcolors<-c('red','blue')
 names(tmpcolors)<-levels(plotdf$x)
 g.tmp<-ggplot(
