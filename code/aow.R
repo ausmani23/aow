@@ -1127,7 +1127,6 @@ blackhhpoverty_2020 <- 1795 * 10^3 #table 4 at https://www.census.gov/data/table
 calcs_list[['If Distributed as a Hyper-Targeted Grant?']] <- 
   10^9 * puborder_usa_2020/blackhhpoverty_2020
 
-  
 #how much would it cost to match Nordic's level of social spending?
 tmp<-tmpdf$countryname%in%c('Norway','Sweden','Denmark','Finland')
 socspendpct_nordic_2020 <- mean(
@@ -1148,24 +1147,23 @@ plotdf<-data.frame(
 )
 plotdf$x<-factor(plotdf$x)
 
-blues<-hcl(
-  h=seq(210,240,length=3),
-  l=65,
-  c=100
-)
-reds<-hcl(
-  h=seq(0,60,length=6),
-  l=65,
-  c=100
-)
-
-tmpcolors<-c('red','blue')
+# blues<-hcl(
+#   h=seq(210,240,length=3),
+#   l=65,
+#   c=100
+# )
+# reds<-hcl(
+#   h=seq(0,60,length=6),
+#   l=65,
+#   c=100
+# )
+tmpcolors<-c('#FF6C91','#00B4F0')
 names(tmpcolors)<-levels(plotdf$x)
 g.tmp<-ggplot(
   plotdf,
   aes(
     x=x,
-    y=y,
+    y=y/10^3,
     fill=x
   )
 ) +
@@ -1181,7 +1179,7 @@ g.tmp<-ggplot(
   coord_flip() +
   theme_bw() + 
   xlab("") + 
-  ylab("\nUS Government Spending (in billions)")
+  ylab("\nUS Government Spending (in trillions)")
 
 setwd(outputdir)
 ggsave(
