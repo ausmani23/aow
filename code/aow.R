@@ -900,7 +900,6 @@ ggsave(
 #compare public order spending
 #with spending on social protection,
 #optionally including also health/education
-
 setwd(datadir); dir()
 spdf<-fread(
   'DP_LIVE_31012023154731621.csv'
@@ -1024,6 +1023,7 @@ names(tmpdf)<-tolower(names(tmpdf))
 tmpdf$ratio_sp<-
   (tmpdf$edu + tmpdf$health + tmpdf$socprot)/
   tmpdf$pubord
+tmpdf$ratio_s3p<-(tmpdf$socprot + tmpdf$edu)/tmpdf$pubord
 tmpdf$ratio_s2p<-(tmpdf$socprot/tmpdf$pubord)
 tmpdf$ratio_s1p<-(tmpdf$edu + tmpdf$health)/tmpdf$pubord
 
@@ -1041,6 +1041,12 @@ median(plotdf$ratio_sp)
 calcs_list[['Ratio in USA']] <- plotdf$ratio_sp[plotdf$country=='USA']
 calcs_list[['Ratio in Denmark']] <- plotdf$ratio_sp[plotdf$countryname=='Denmark']
 
+# #save out for china shock
+# setwd(outputdir); dir()
+# write.csv(
+#   plotdf[,c('countryname','ratio_sp','ratio_s3p','ratio_s2p'),with=F],
+#   'ratiosp_chinashock.csv',row.names=F
+# )
 
 # DEPRECATED (we don't use this graph)
 # tmporder<-order(plotdf$ratio_sp)
@@ -1101,11 +1107,38 @@ socspendpct_usa_2020 <-
   tmpdf$edu[tmpdf$country=='USA' & tmpdf$var=='value'] + 
   tmpdf$health[tmpdf$country=='USA' & tmpdf$var=='value'])/100
 
+#compare these numbers to American estimates 
+#https://www.usgovernmentspending.com/year_spending_2020USmn_25ms2n_80#usgs302
+pensions<-1.5 * 10^12
+healthcare<-2.033 * 10^12
+education<-1.334 * 10^12
+welfare<-1.296 * 10^12
+spolicy_2020 <- pensions + healthcare + welfare + education
+
+police<-157 * 10^9
+fire <- 57 * 10^9
+prisons<- 93 * 10^9
+publicorder <- 13 * 10^9
+courts <- 77 * 10^9
+ppolicy_2020 <- police + fire + prisons + publicorder + courts
+#note that OECD includes fire, so we include fire for comparison
+
 #$ amount spent (in billions)
 puborder_usa_2020 <- (puborderpct_usa_2020 * usagdp_2020)/10^9
+#but we will subtract fire spending from puborder, for the calculations below
+puborder_usa_2020 <- puborder_usa_2020 - fire/10^9
+puborderpct_usa_2020 <- 10^9 * (puborder_usa_2020/usagdp_2020)
 calcs_list[['USA Spending on Public Order (billiions)']] <- puborder_usa_2020 
 socspend_usa_2020 <- (socspendpct_usa_2020 * usagdp_2020)/10^9
 calcs_list[['USA Spending on Social Protection, Education and Health (billions)']] <- socspend_usa_2020
+
+#note that this is within tolerable bounds of error
+(spolicy_2020 - (socspend_usa_2020*10^9))/
+  (socspend_usa_2020*10^9) #off by only about 2%
+(ppolicy_2020 - (puborder_usa_2020*10^9))/
+  (puborder_usa_2020*10^9) #off by about 6%
+#within tolerable bounds of error..
+
 
 #how does the US rank relative to other countries
 tmpdf$sp<-tmpdf$edu + tmpdf$health + tmpdf$socprot
@@ -1169,7 +1202,7 @@ g.tmp<-ggplot(
 ) +
   geom_bar(
     stat='identity',
-    width=0.3,
+    width=0.5,
     color='black'
   ) +
   scale_fill_manual(
@@ -1179,14 +1212,17 @@ g.tmp<-ggplot(
   coord_flip() +
   theme_bw() + 
   xlab("") + 
-  ylab("\nUS Government Spending (in trillions)")
+  ylab("\nUS Government Spending (in trillions)") +
+  theme(
+    axis.title.x = element_text(size=9)
+  )
 
-setwd(outputdir)
+setwd(outputdir); dir()
 ggsave(
   filename='fig_govspending.png',
   plot=g.tmp,
-  width=6,
-  height=2
+  width=4/1.15,
+  height=2/1.15
 )
 
 #########################################################
